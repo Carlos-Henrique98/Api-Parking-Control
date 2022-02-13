@@ -2,6 +2,7 @@ package com.api.parkingcontrol.controllers;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 
 import javax.validation.Valid;
 
@@ -9,6 +10,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,29 +24,35 @@ import com.api.parkingcontrol.services.ParkingSpotService;
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/parking-spot")
 public class ParkingSpotController {
-	
+
 	final ParkingSpotService parkingSpotService;
 
 	public ParkingSpotController(ParkingSpotService parkingSpotService) {
 		this.parkingSpotService = parkingSpotService;
 	}
-	
+
 	@PostMapping
-	public ResponseEntity<Object> saveParkingSpt(@RequestBody @Valid ParkingSpotDto parkingSpotDto){
-		if(parkingSpotService.exitsByLicensePlateCar(parkingSpotDto.getLicensePlateCar())) {
+	public ResponseEntity<Object> saveParkingSpt(@RequestBody @Valid ParkingSpotDto parkingSpotDto) {
+		if (parkingSpotService.exitsByLicensePlateCar(parkingSpotDto.getLicensePlateCar())) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("Conflict: License Plate Car is already in use!");
 		}
-		if(parkingSpotService.exitsByParkingSpotNumber(parkingSpotDto.getParkingSpotNumber())) {
+		if (parkingSpotService.exitsByParkingSpotNumber(parkingSpotDto.getParkingSpotNumber())) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("Conflict: Parking Spot is already in use!");
 		}
-		if(parkingSpotService.exitsByApartmentAndBlock(parkingSpotDto.getApartment(), parkingSpotDto.getBlock())) {
-			return ResponseEntity.status(HttpStatus.CONFLICT).body("Conflict: Parking Spot already registered for this apartment/block!");
+		if (parkingSpotService.exitsByApartmentAndBlock(parkingSpotDto.getApartment(), parkingSpotDto.getBlock())) {
+			return ResponseEntity.status(HttpStatus.CONFLICT)
+					.body("Conflict: Parking Spot already registered for this apartment/block!");
 		}
-		
+
 		var parkingSpotModel = new ParkingSpotModel();
 		BeanUtils.copyProperties(parkingSpotDto, parkingSpotModel);
 		parkingSpotModel.setRegistrationDate(LocalDateTime.now(ZoneId.of("UTC")));
 		return ResponseEntity.status(HttpStatus.CREATED).body(parkingSpotService.save(parkingSpotModel));
+	}
+
+	@GetMapping
+	public ResponseEntity<List<ParkingSpotModel>> getAllParkingSpots() {
+		return ResponseEntity.status(HttpStatus.OK).body(parkingSpotService.findAll());
 	}
 
 }
